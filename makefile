@@ -2,10 +2,10 @@ SOURCE_EXT=c
 OBJ_EXT=o
 HEAD_EXT=h
 OBJ_HEAD_EXT=gch
-CC=g++
-CFLAGS=-c -I. -std=c++11
-LDFLAGS=
-DFLAGS=-DDEBUG -ggdb -g3 -Wall -fdiagnostics-color=auto 
+CC=gcc
+CFLAGS=-c -I.
+LDFLAGS=-lncurses
+DFLAGS=-DDEBUG -ggdb -g3 -Wall -fdiagnostics-color=auto
 DEFAULT_DEBUG=y
 
 EXECUTABLE=rdir.x
