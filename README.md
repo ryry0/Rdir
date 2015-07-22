@@ -10,11 +10,13 @@ It will excel in two things, that is: traversing directories quickly, and writin
 It aims to do this purely in C so no python or ruby will be required.
 
 ### TODO ###
-* Render window
-* movement
-* show selected dirs and change dirs
-* output selected directory
+* ~~Render window~~
+* ~~movement~~
+* ~~show selected dirs and change dirs~~
+* ~~output selected directory~~
+* scroll middle column scrolling with scrollbar
 * multiple directories
 * marks
 * tmux integration
 * fuzzy directory/file matching
+* make script more cross platform
