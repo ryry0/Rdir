@@ -9,6 +9,8 @@ It will excel in two things, that is: traversing directories quickly, and writin
 
 It aims to do this purely in C so no python or ruby will be required.
 
+At the moment, it can function as a directory traveler using functions in a helper script.
+
 ### TODO ###
 * ~~Render window~~
 * ~~movement~~
