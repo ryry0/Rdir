@@ -129,28 +129,64 @@ int main(int argc, char ** argv) {
     clear();
     //print parent dir list if current directory is not root
     if (strcmp(dir_current.path, "/") != 0) {
+
       for(int i = 0; i < dir_parent.capacity; ++i) {
+
+        if (dir_parent.entries[i].is_dir) { //if dir, color it
+          attron(COLOR_PAIR(1));
+          attron(A_BOLD);
+        }
         mvprintw(i, 0, "%s", dir_parent.entries[i].basename);
-      }
-    }
+
+        if (dir_parent.entries[i].is_dir) { //if dir, color it
+          attroff(COLOR_PAIR(1));
+          attroff(A_BOLD);
+        }
+      } //end for(int
+
+    } //end if (strcmp
 
     //print current directory and highlights
     for(int i = 0; (i < dir_current.capacity && i < screen.max_rows); ++i) {
       if (i == cursor_index) //if its selected, highlight it
         attron(A_STANDOUT);
+
+      if (dir_current.entries[i + begin_list_offset].is_dir) {//if dir, color it
+        attron(COLOR_PAIR(1));
+        attron(A_BOLD);
+      }
+
       mvprintw(i, rdir.parent_column_width, "%s",
           dir_current.entries[i + begin_list_offset].basename);
+
+      if (dir_current.entries[i + begin_list_offset].is_dir) { //if dir, color it
+        attroff(COLOR_PAIR(1));
+        attroff(A_BOLD);
+      }
+
       if (i == cursor_index) //unhighlight
         attroff(A_STANDOUT);
-    }
+    } //end for
 
     //print the contents of the selected directory
     if (dir_current.entries[selected_dir_index].is_dir) {
+
       for(int i = 0; i < dir_selected.capacity; ++i) {
+
+        if (dir_selected.entries[i].is_dir) { //if dir, color it
+          attron(COLOR_PAIR(1));
+          attron(A_BOLD);
+        }
+
         mvprintw(i, rdir.current_column_width + rdir.parent_column_width,
             "%s", dir_selected.entries[i].basename);
-      }
-    }
+
+        if (dir_selected.entries[i].is_dir) { //if dir, color it
+          attroff(COLOR_PAIR(1));
+          attroff(A_BOLD);
+        }
+      } //end for
+    } //end if
 
     mvprintw(screen.max_rows -1, 0, "sdi:%d ci:%d lo:%d mr:%d",
         selected_dir_index, cursor_index, begin_list_offset, screen.max_rows);
@@ -199,6 +235,9 @@ void initTerminal(screen_t *screen) {
   keypad(stdscr, TRUE); //allows the user to read F1..arrow keys
   noecho();             //no echo with getch
   curs_set(FALSE);      //no blinking cursor
+  start_color();
+  use_default_colors();
+  init_pair(1, COLOR_BLUE, -1); //allow transparency support
 } //end void initTerminal
 
 /*
@@ -300,13 +339,17 @@ int getDirList(directory_entry_list_t *dir_list, char * path) {
   size_t counter = 0;
   struct stat stat_buff;
   char cwd[PATH_MAX];
+  char new_wd[PATH_MAX];
 
   //get cwd
-  getcwd(cwd, PATH_MAX);
-  dir_list->path = malloc(strlen(cwd)+1);
-  strcpy(dir_list->path, cwd);
+  getcwd(cwd, PATH_MAX); //save working directory
 
-  dir_p = opendir(path);
+  chdir(path); //change to new directory
+  getcwd(new_wd, PATH_MAX);
+  dir_list->path = malloc(strlen(new_wd)+1);
+  strcpy(dir_list->path, new_wd);
+
+  dir_p = opendir(new_wd);
   if (dir_p == NULL) {
     closedir(dir_p);
     return -1;
@@ -341,6 +384,7 @@ int getDirList(directory_entry_list_t *dir_list, char * path) {
     }
   } //end while (entry_p...
   closedir(dir_p);
+  chdir(cwd); //return to previous working directory
 
   return 0;
 } //end getDirList
