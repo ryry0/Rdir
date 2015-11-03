@@ -262,6 +262,7 @@ int readConfig(char * config_file_name) {
 void handleKeys(char input, directory_entry_list_t *dir_list, size_t
     *selected_dir_index, size_t *begin_list_offset, screen_t screen, size_t
     *cursor_index) {
+  char f_input;
   switch(input) {
     case 'j': //move selection down
       *selected_dir_index = *selected_dir_index + 1;
@@ -310,6 +311,41 @@ void handleKeys(char input, directory_entry_list_t *dir_list, size_t
     case 'l': //change current directory to selected dir
       chdir(dir_list->entries[*selected_dir_index].basename);
       *begin_list_offset = 0;
+      break;
+
+    case 'f':
+      f_input = getch();
+      *begin_list_offset = 0;
+      *cursor_index = 0;
+      *selected_dir_index = 0;
+      for (int i = 0; i < dir_list->capacity; ++i) {
+        if(dir_list->entries[*selected_dir_index].basename[0] == f_input)
+          break;
+
+        *selected_dir_index = *selected_dir_index + 1;
+        *cursor_index = *cursor_index + 1;
+
+        if (*selected_dir_index >= dir_list->capacity) //bounds checking
+          *selected_dir_index = dir_list->capacity - 1;
+
+        //if the selection is off screen scroll down
+        if (*cursor_index > screen.max_rows - 1)
+          (*begin_list_offset)++;
+
+        //bounds checking for cursor
+        if (*cursor_index >= screen.max_rows - 1)
+          *cursor_index = screen.max_rows - 1;
+
+        if (*cursor_index >= dir_list->capacity)
+          *cursor_index = dir_list->capacity - 1;
+
+        //bounds checking for list offset
+        //should only apply if list goes off screen
+        if(screen.max_rows < dir_list->capacity) {
+          if (*begin_list_offset + screen.max_rows > dir_list->capacity)
+            (*begin_list_offset)--;
+        }
+      }
       break;
 
     case 'q': //quit
