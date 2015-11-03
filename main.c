@@ -333,9 +333,8 @@ void handleKeys(char input, directory_entry_list_t *dir_list, size_t
  * getDirList populates the directory lists with the folders in path
  */
 int getDirList(directory_entry_list_t *dir_list, char * path) {
-  DIR * dir_p;
-  struct dirent *entry_p;
-  size_t num_dirs = 0;
+  struct dirent **namelist;
+  size_t num_entries = 0;
   size_t counter = 0;
   struct stat stat_buff;
   char cwd[PATH_MAX];
@@ -349,41 +348,38 @@ int getDirList(directory_entry_list_t *dir_list, char * path) {
   dir_list->path = malloc(strlen(new_wd)+1);
   strcpy(dir_list->path, new_wd);
 
-  dir_p = opendir(new_wd);
-  if (dir_p == NULL) {
-    closedir(dir_p);
-    return -1;
-  }
-
   //grab number of dirs
-  while ((entry_p = readdir(dir_p))) {
-    if (strncmp(entry_p->d_name, ".", 1) != 0) {
-      num_dirs++;
+  num_entries = scandir(new_wd, &namelist, NULL, alphasort);
+
+  //recount dir capacity
+  dir_list->capacity = 0;
+  for (int i = 0; i < num_entries; i++) { //get num entries without preceding dots
+    if (strncmp(namelist[i]->d_name, ".", 1) != 0) {
+      dir_list->capacity++;
     }
   }
-
   //allocate required number of entries
-  dir_list->capacity = num_dirs;
-  dir_list->entries = malloc(num_dirs * sizeof (directory_entry_t));
-  rewinddir(dir_p);
+  dir_list->entries = malloc(dir_list->capacity * sizeof (directory_entry_t));
 
-  while ((entry_p = readdir(dir_p))) {
+  for (int i = 0; i < num_entries; i++) {
     //if it doesn't start with period, put in dirlist
-    if (strncmp(entry_p->d_name, ".", 1) != 0) {
-      dir_list->entries[counter].basename = malloc(strlen(entry_p->d_name)+1);
-      strcpy(dir_list->entries[counter].basename, entry_p->d_name);
+    if (strncmp(namelist[i]->d_name, ".", 1) != 0) {
+      dir_list->entries[counter].basename =
+        malloc(strlen(namelist[i]->d_name)+1);
+      strcpy(dir_list->entries[counter].basename, namelist[i]->d_name);
 
       //check if entry is directory
-      stat(entry_p->d_name, &stat_buff);
+      stat(namelist[i]->d_name, &stat_buff);
       if (S_ISDIR(stat_buff.st_mode))
         dir_list->entries[counter].is_dir = true;
       else
         dir_list->entries[counter].is_dir = false;
-
-      counter++;
+      counter ++;
     }
+    free(namelist[i]);
   } //end while (entry_p...
-  closedir(dir_p);
+
+  free(namelist);
   chdir(cwd); //return to previous working directory
 
   return 0;

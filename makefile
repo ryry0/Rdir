@@ -3,7 +3,7 @@ OBJ_EXT=o
 HEAD_EXT=h
 OBJ_HEAD_EXT=gch
 CC=gcc
-CFLAGS=-c -I. -std=c11
+CFLAGS=-c -I. -std=gnu11
 LDFLAGS=-lncurses
 DFLAGS=-DDEBUG -ggdb -g3 -Wall -fdiagnostics-color=auto
 DEFAULT_DEBUG=y
