@@ -4,16 +4,16 @@ function rdir() {
   rdir.x 2> /tmp/rdir
   ERROR=$(</tmp/rdir)
   rm /tmp/rdir
-  echo $ERROR | sed 's/using defaults//'
+  echo $ERROR
 }
 
-function rcd() {
+function c() {
   rdir.x 2> /tmp/rdir
   ERROR=$(</tmp/rdir)
   rm /tmp/rdir
 
-  echo $ERROR | sed 's/using defaults//'
-  DIR=$(echo $ERROR | sed 's/using defaults//')
+  echo $ERROR
+  DIR=$(echo $ERROR)
 
   if [[ -d $DIR ]]; then
     builtin cd $DIR
