@@ -16,7 +16,8 @@ At the moment, it can function as a directory traveler using functions in a help
 * ~~movement~~
 * ~~show selected dirs and change dirs~~
 * ~~output selected directory~~
-* scroll middle column scrolling with scrollbar
+* ~~scroll middle column~~
+* scrolling with scrollbar
 * multiple directories
 * marks
 * tmux integration
