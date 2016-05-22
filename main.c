@@ -13,6 +13,7 @@
 
 #define DEFAULT_CONFIG_FILE ".rdirrc"
 #define ENTER 0x10
+#define NUM_DIR_LISTS 3
 
 /**********************************/
 /*        ENUM DEFINITIONS        */
@@ -31,114 +32,116 @@ typedef struct {
 
 //represents a single directory entry
 typedef struct {
-  char * basename;
+  char *basename;
   bool is_dir;
 } directory_entry_t;
 
 //represents a list of above entries
 typedef struct {
   size_t capacity;
-  directory_entry_t * entries;
-  char * path;
+  directory_entry_t *entries;
+  char *path;
 } directory_entry_list_t;
 
+typedef struct {
+  program_states_t state;
+  screen_t screen;
+
+  char   *config_file_name;
+  char input;
+
+  size_t parent_column_width;
+  size_t current_column_width;
+  size_t child_column_width;
+
+  size_t selected_dir_index; //zero based index
+  size_t begin_list_offset;
+  size_t cursor_index;
+
+  union {
+    struct {
+      directory_entry_list_t dir_parent;    //directory entry list for parent dir
+      directory_entry_list_t dir_current;   //direntry list for current working dir
+      directory_entry_list_t dir_selected;  //directory entry list for highlighted dir
+    };
+    directory_entry_list_t dir_lists[NUM_DIR_LISTS];
+  };
+} rdir_t;
 
 /**********************************/
 /*       FUNCTION PROTOTYPES      */
 /**********************************/
 void initTerminal(screen_t *screen);
 void initSettings();
-int readConfig(char * config_file_name);
-void handleKeys(char input, directory_entry_list_t *dir_list,
-    size_t *selected_dir_index, size_t *begin_list_offset, screen_t screen,
-    size_t *cursor_index);
-int getDirList(directory_entry_list_t *dir_list, char * path);
+int readConfig(char *config_file_name);
+void handleKeys(rdir_t *rdir);
+int getDirList(directory_entry_list_t *dir_list, char *path);
 void clearDirList(directory_entry_list_t *dir_list);
 void initDirList(directory_entry_list_t *dir_list);
 void signalHandler(int param);
 
 
 /**********************************/
-/*          GLOBAL STATE          */
-/**********************************/
-static struct Rdir {
-  program_states_t state;
-  size_t parent_column_width;
-  size_t current_column_width;
-  size_t child_column_width;
-} rdir;
-
-/**********************************/
 /*             MAIN               */
 /**********************************/
 int main(int argc, char ** argv) {
-  screen_t screen;
-  char * config_file_name = DEFAULT_CONFIG_FILE;
-  size_t selected_dir_index = 0; //zero based index
-  size_t begin_list_offset = 0;
-  size_t cursor_index = 0;
-
-  directory_entry_list_t dir_parent;    //directory entry list for parent dir
-  directory_entry_list_t dir_current;   //direntry list for current working dir
-  directory_entry_list_t dir_selected;  //directory entry list for highlighted dir
-
-  char input;
-
   //ncurses initialization
-  initTerminal(&screen);
+  rdir_t rdir;
+  initTerminal(&rdir.screen);
 
-  initSettings();
+  initSettings(&rdir);
   //read configuration file
-  if (readConfig(config_file_name) == -1) {
+  if (readConfig(rdir.config_file_name) == -1) {
     //fprintf(stderr, "using default settings");
   }
 
   //initialize the lists
-  initDirList(&dir_parent);
-  initDirList(&dir_selected);
-  initDirList(&dir_current);
+  for (int i = 0; i < NUM_DIR_LISTS; ++i) {
+    initDirList(&rdir.dir_lists[i]);
+  }
 
   //main loop
   while (rdir.state == RUNNING) {
     //GRAB DIRECTORIES
     //populate current and parent directory lists
-    getDirList(&dir_current, ".");
-    getDirList(&dir_parent, "..");
+    getDirList(&rdir.dir_current, ".");
+    getDirList(&rdir.dir_parent, "..");
 
     //bounds checking for the selected folder index
-    if (selected_dir_index >= dir_current.capacity) {
-      if (dir_current.capacity == 0) {//if capacity zero force index to zero
-        selected_dir_index = 0;
-        cursor_index = 0;
+    if (rdir.selected_dir_index >= rdir.dir_current.capacity) {
+      if (rdir.dir_current.capacity == 0) {//if capacity zero force index to zero
+        rdir.selected_dir_index = 0;
+        rdir.cursor_index = 0;
       }
       else {//else force index to capacity - 1
-        selected_dir_index = dir_current.capacity -1;
-        cursor_index = selected_dir_index;
+        rdir.selected_dir_index = rdir.dir_current.capacity -1;
+        rdir.cursor_index = rdir.selected_dir_index;
       }
     }
 
     //make sure something exists in current dir before
     //trying to get selected dir's contents
-    if (dir_current.capacity > 0) {
-      if (dir_current.entries[selected_dir_index].is_dir)
-        getDirList(&dir_selected, dir_current.entries[selected_dir_index].basename);
+    if (rdir.dir_current.capacity > 0) {
+      if (rdir.dir_current.entries[rdir.selected_dir_index].is_dir)
+        getDirList(&rdir.dir_selected,
+            rdir.dir_current.entries[rdir.selected_dir_index].basename);
     }
 
     //DRAW DISPLAY
     //clear screen
     clear();
     //print parent dir list if current directory is not root
-    if (strcmp(dir_current.path, "/") != 0) {
+    if (strcmp(rdir.dir_current.path, "/") != 0) {
 
-      for(int i = 0; i < dir_parent.capacity; ++i) {
+      for(int i = 0; i < rdir.dir_parent.capacity; ++i) {
 
-        if (dir_parent.entries[i].is_dir) { //if dir, color it
+        if (rdir.dir_parent.entries[i].is_dir) { //if dir, color it
           attron(COLOR_PAIR(1));
           attron(A_BOLD);
         }
-        mvprintw(i, 0, "%s", dir_parent.entries[i].basename);
+        mvprintw(i, 0, "%s", rdir.dir_parent.entries[i].basename);
 
-        if (dir_parent.entries[i].is_dir) { //if dir, color it
+        if (rdir.dir_parent.entries[i].is_dir) { //if dir, color it
           attroff(COLOR_PAIR(1));
           attroff(A_BOLD);
         }
@@ -147,82 +150,87 @@ int main(int argc, char ** argv) {
     } //end if (strcmp
 
     //print current directory and highlights
-    for(int i = 0; (i < dir_current.capacity && i < screen.max_rows); ++i) {
-      if (i == cursor_index) //if its selected, highlight it
+    for(int i = 0; (i < rdir.dir_current.capacity && i < rdir.screen.max_rows); ++i) {
+      if (i == rdir.cursor_index) //if its selected, highlight it
         attron(A_STANDOUT);
 
-      if (dir_current.entries[i + begin_list_offset].is_dir) {//if dir, color it
+      if (rdir.dir_current.entries[i + rdir.begin_list_offset].is_dir) {//if dir, color it
         attron(COLOR_PAIR(1));
         attron(A_BOLD);
       }
 
       mvprintw(i, rdir.parent_column_width, "%s",
-          dir_current.entries[i + begin_list_offset].basename);
+          rdir.dir_current.entries[i + rdir.begin_list_offset].basename);
 
-      if (dir_current.entries[i + begin_list_offset].is_dir) { //if dir, color it
+      if (rdir.dir_current.entries[i + rdir.begin_list_offset].is_dir) { //if dir, color it
         attroff(COLOR_PAIR(1));
         attroff(A_BOLD);
       }
 
-      if (i == cursor_index) //unhighlight
+      if (i == rdir.cursor_index) //unhighlight
         attroff(A_STANDOUT);
     } //end for
 
     //print the contents of the selected directory
-    if (dir_current.entries[selected_dir_index].is_dir) {
+    if (rdir.dir_current.entries[rdir.selected_dir_index].is_dir) {
 
-      for(int i = 0; i < dir_selected.capacity; ++i) {
+      for(int i = 0; i < rdir.dir_selected.capacity; ++i) {
 
-        if (dir_selected.entries[i].is_dir) { //if dir, color it
+        if (rdir.dir_selected.entries[i].is_dir) { //if dir, color it
           attron(COLOR_PAIR(1));
           attron(A_BOLD);
         }
 
         mvprintw(i, rdir.current_column_width + rdir.parent_column_width,
-            "%s", dir_selected.entries[i].basename);
+            "%s", rdir.dir_selected.entries[i].basename);
 
-        if (dir_selected.entries[i].is_dir) { //if dir, color it
+        if (rdir.dir_selected.entries[i].is_dir) { //if dir, color it
           attroff(COLOR_PAIR(1));
           attroff(A_BOLD);
         }
       } //end for
     } //end if
 
-    mvprintw(screen.max_rows -1, 0, "sdi:%d ci:%d lo:%d mr:%d",
-        selected_dir_index, cursor_index, begin_list_offset, screen.max_rows);
+    mvprintw(rdir.screen.max_rows -1, 0, "sdi:%d ci:%d lo:%d mr:%d",
+        rdir.selected_dir_index, rdir.cursor_index, rdir.begin_list_offset, rdir.screen.max_rows);
 
     //HANDLE INPUT
-    input = getch();
+    rdir.input = getch();
 
     //handle keys and exec key action
-    handleKeys(input, &dir_current, &selected_dir_index,
-        &begin_list_offset, screen, &cursor_index);
+    handleKeys(&rdir);
 
     //CLEAR LISTS
-    if (dir_current.entries[selected_dir_index].is_dir)
-      clearDirList(&dir_selected);
-    clearDirList(&dir_current);
-    clearDirList(&dir_parent);
+    if (rdir.dir_current.entries[rdir.selected_dir_index].is_dir)
+      clearDirList(&rdir.dir_selected);
+    clearDirList(&rdir.dir_current);
+    clearDirList(&rdir.dir_parent);
   } //end while (state)
 
-  clearDirList(&dir_current);
-  clearDirList(&dir_parent);
-  clearDirList(&dir_selected);
+  clearDirList(&rdir.dir_current);
+  clearDirList(&rdir.dir_parent);
+  clearDirList(&rdir.dir_selected);
   endwin();
   return 0;
 } //end main
 
 /**********************************/
-/*        FUNC DEFINITIONS        */
+/*        FUNCTION DEFINITIONS        */
 /**********************************/
 /*
  * INITSETTINGS initializes the values in the global struct
  */
-void initSettings() {
-  rdir.state = RUNNING;
-  rdir.parent_column_width = 30;
-  rdir.child_column_width = 30;
-  rdir.current_column_width = 30;
+void initSettings(rdir_t *rdir) {
+  rdir->state = RUNNING;
+  rdir->config_file_name = DEFAULT_CONFIG_FILE;
+
+  rdir->parent_column_width = 30;
+  rdir->child_column_width = 30;
+  rdir->current_column_width = 30;
+
+  rdir->selected_dir_index = 0;
+  rdir->begin_list_offset = 0;
+  rdir->cursor_index = 0;
 }
 
 /*
@@ -259,17 +267,22 @@ int readConfig(char * config_file_name) {
 /*
  * HANDLEKEYS takes the input and executes the corresponding bound action
  */
-void handleKeys(char input, directory_entry_list_t *dir_list, size_t
-    *selected_dir_index, size_t *begin_list_offset, screen_t screen, size_t
-    *cursor_index) {
+void handleKeys(rdir_t *rdir) {
   char f_input;
-  switch(input) {
+  size_t *selected_dir_index = &rdir->selected_dir_index; //zero based index
+  size_t *begin_list_offset = &rdir->begin_list_offset;
+  size_t *cursor_index = &rdir->cursor_index;
+  directory_entry_list_t *dir_current = &rdir->dir_current;
+  screen_t screen = rdir->screen;
+  program_states_t *state = &rdir->state;
+
+  switch(rdir->input) {
     case 'j': //move selection down
       *selected_dir_index = *selected_dir_index + 1;
       *cursor_index = *cursor_index + 1;
 
-      if (*selected_dir_index >= dir_list->capacity) //bounds checking
-        *selected_dir_index = dir_list->capacity - 1;
+      if (*selected_dir_index >= dir_current->capacity) //bounds checking
+        *selected_dir_index = dir_current->capacity - 1;
 
       //if the selection is off screen scroll down
       if (*cursor_index > screen.max_rows - 1)
@@ -279,13 +292,13 @@ void handleKeys(char input, directory_entry_list_t *dir_list, size_t
       if (*cursor_index >= screen.max_rows - 1)
         *cursor_index = screen.max_rows - 1;
 
-      if (*cursor_index >= dir_list->capacity)
-        *cursor_index = dir_list->capacity - 1;
+      if (*cursor_index >= dir_current->capacity)
+        *cursor_index = dir_current->capacity - 1;
 
       //bounds checking for list offset
       //should only apply if list goes off screen
-      if(screen.max_rows < dir_list->capacity) {
-        if (*begin_list_offset + screen.max_rows > dir_list->capacity)
+      if(screen.max_rows < dir_current->capacity) {
+        if (*begin_list_offset + screen.max_rows > dir_current->capacity)
           (*begin_list_offset)--;
       }
       break;
@@ -309,7 +322,7 @@ void handleKeys(char input, directory_entry_list_t *dir_list, size_t
       break;
 
     case 'l': //change current directory to selected dir
-      chdir(dir_list->entries[*selected_dir_index].basename);
+      chdir(dir_current->entries[*selected_dir_index].basename);
       *begin_list_offset = 0;
       break;
 
@@ -318,15 +331,15 @@ void handleKeys(char input, directory_entry_list_t *dir_list, size_t
       *begin_list_offset = 0;
       *cursor_index = 0;
       *selected_dir_index = 0;
-      for (int i = 0; i < dir_list->capacity; ++i) {
-        if(dir_list->entries[*selected_dir_index].basename[0] == f_input)
+      for (int i = 0; i < dir_current->capacity; ++i) {
+        if(dir_current->entries[*selected_dir_index].basename[0] == f_input)
           break;
 
         *selected_dir_index = *selected_dir_index + 1;
         *cursor_index = *cursor_index + 1;
 
-        if (*selected_dir_index >= dir_list->capacity) //bounds checking
-          *selected_dir_index = dir_list->capacity - 1;
+        if (*selected_dir_index >= dir_current->capacity) //bounds checking
+          *selected_dir_index = dir_current->capacity - 1;
 
         //if the selection is off screen scroll down
         if (*cursor_index > screen.max_rows - 1)
@@ -336,31 +349,31 @@ void handleKeys(char input, directory_entry_list_t *dir_list, size_t
         if (*cursor_index >= screen.max_rows - 1)
           *cursor_index = screen.max_rows - 1;
 
-        if (*cursor_index >= dir_list->capacity)
-          *cursor_index = dir_list->capacity - 1;
+        if (*cursor_index >= dir_current->capacity)
+          *cursor_index = dir_current->capacity - 1;
 
         //bounds checking for list offset
         //should only apply if list goes off screen
-        if(screen.max_rows < dir_list->capacity) {
-          if (*begin_list_offset + screen.max_rows > dir_list->capacity)
+        if(screen.max_rows < dir_current->capacity) {
+          if (*begin_list_offset + screen.max_rows > dir_current->capacity)
             (*begin_list_offset)--;
         }
       }
       break;
 
     case 'q': //quit
-      rdir.state = EXITING;
+      *state = EXITING;
       break;
 
     case 'c':
-      fprintf(stderr, "%s", dir_list->path);
-      rdir.state = EXITING;
+      fprintf(stderr, "%s", dir_current->path);
+      *state = EXITING;
       break;
 
     case '\n': //print selected dir to stderr
-      fprintf(stderr, "%s/%s", dir_list->path,
-          dir_list->entries[*selected_dir_index].basename);
-      rdir.state = EXITING;
+      fprintf(stderr, "%s/%s", dir_current->path,
+          dir_current->entries[*selected_dir_index].basename);
+      *state = EXITING;
       break;
   }
 } //end handleKeys
@@ -458,5 +471,5 @@ void initDirList(directory_entry_list_t *dir_list) {
  * SIGNALHANDLER sets state var to exit
  */
 void signalHandler(int param) {
-  rdir.state = EXITING;
+  //rdir.state = EXITING;
 }
