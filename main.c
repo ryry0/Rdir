@@ -24,14 +24,16 @@ void initTerminal(screen_t *screen);
 void initSettings();
 int readConfig(char *config_file_name);
 void signalHandler(int param);
-void printColumn(directory_entry_list_t *dir_list, size_t offset);
+void printColumn(directory_entry_list_t *dir_list, size_t offset,
+    char *format_string);
 
 /**********************************/
 /*             MAIN               */
 /**********************************/
 int main(int argc, char ** argv) {
-  //ncurses initialization
   rdir_t rdir;
+  char format_string[10];
+  //ncurses initialization
   initTerminal(&rdir.screen);
 
   initSettings(&rdir);
@@ -39,6 +41,8 @@ int main(int argc, char ** argv) {
   if (readConfig(rdir.config_file_name) == -1) {
     //fprintf(stderr, "using default settings");
   }
+
+  sprintf(format_string, "%%.%lds", rdir.current_column_width - 1);
 
   //initialize the lists
   for (int i = 0; i < NUM_DIR_LISTS; ++i) {
@@ -77,7 +81,7 @@ int main(int argc, char ** argv) {
     clear();
     //print parent dir list if current directory is not root
     if (strcmp(rdir.dir_current.path, "/") != 0) {
-      printColumn(&rdir.dir_parent, 0);
+      printColumn(&rdir.dir_parent, 0, format_string);
     }
 
     //print current directory and highlights
@@ -90,7 +94,7 @@ int main(int argc, char ** argv) {
         attron(A_BOLD);
       }
 
-      mvprintw(i, rdir.parent_column_width, "%s",
+      mvprintw(i, rdir.parent_column_width, format_string,
           rdir.dir_current.entries[i + rdir.begin_list_offset].basename);
 
       if (rdir.dir_current.entries[i + rdir.begin_list_offset].is_dir) { //if dir, color it
@@ -105,7 +109,7 @@ int main(int argc, char ** argv) {
     //print the contents of the selected directory
     if (rdir.dir_current.entries[rdir.selected_dir_index].is_dir) {
       printColumn(&rdir.dir_selected, rdir.current_column_width +
-          rdir.parent_column_width);
+          rdir.parent_column_width, format_string);
     }
 
     //debug
@@ -182,14 +186,14 @@ int readConfig(char * config_file_name) {
   return 0;
 } //end readConfig
 
-void printColumn(directory_entry_list_t *dir_list, size_t offset) {
+void printColumn(directory_entry_list_t *dir_list, size_t offset, char *format_string) {
   for(int i = 0; i < dir_list->capacity; ++i) {
 
     if (dir_list->entries[i].is_dir) { //if dir, color it
       attron(COLOR_PAIR(1));
       attron(A_BOLD);
     }
-    mvprintw(i, offset, "%s", dir_list->entries[i].basename);
+    mvprintw(i, offset, format_string, dir_list->entries[i].basename);
 
     if (dir_list->entries[i].is_dir) { //if dir, color it
       attroff(COLOR_PAIR(1));
