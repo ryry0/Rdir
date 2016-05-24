@@ -11,6 +11,7 @@
 /*         OTHER INCLUDES         */
 /**********************************/
 #include <rdir.h>
+#include <hashtable.h>
 #include <dir_list.h>
 #include <keyboard.h>
 
@@ -36,7 +37,9 @@ int main(int argc, char ** argv) {
   //ncurses initialization
   initTerminal(&rdir.screen);
 
+  initTable(&rdir.key_mappings, 20); //initialize hash table of key mappings
   initSettings(&rdir);
+
   //read configuration file
   if (readConfig(rdir.config_file_name) == -1) {
     //fprintf(stderr, "using default settings");
@@ -132,6 +135,7 @@ int main(int argc, char ** argv) {
   clearDirList(&rdir.dir_current);
   clearDirList(&rdir.dir_parent);
   clearDirList(&rdir.dir_selected);
+  destroyTable(&rdir.key_mappings); //destroy hash table of key mappings
   endwin();
   return 0;
 } //end main
@@ -153,6 +157,17 @@ void initSettings(rdir_t *rdir) {
   rdir->selected_dir_index = 0;
   rdir->begin_list_offset = 0;
   rdir->cursor_index = 0;
+  rdir->mode = COMMAND;
+
+  //set up default key bindings
+  insert(&rdir->key_mappings, "j", MOVE_SEL_DOWN);
+  insert(&rdir->key_mappings, "k", MOVE_SEL_UP);
+  insert(&rdir->key_mappings, "h", UP_DIR);
+  insert(&rdir->key_mappings, "l", CH_DIR);
+  insert(&rdir->key_mappings, "f", FORWARD_MODE);
+  insert(&rdir->key_mappings, "c", PRINT_CURRENT_DIR);
+  insert(&rdir->key_mappings, "\n", PRINT_SEL_DIR);
+  insert(&rdir->key_mappings, "q", QUIT);
 }
 
 /*

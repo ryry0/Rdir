@@ -13,11 +13,12 @@ typedef struct hash_table_t {
   struct hash_node_t ** table;
 } hash_table;
 
+//no duplicate keys
 void initTable(hash_table * h_table, size_t size);
 void insert(hash_table * h_table, char * key, int data);
 void removeNode(hash_table * h_table, char * key);
 void destroyTable(hash_table *h_table);
-hash_node * retrieve(hash_table * h_table, char * key);
+hash_node * retrieve(hash_table * h_table, char * key); //returns NULL if n/a
 void printTable(hash_table * h_table);
 long hash (char *key);
 void printNode(hash_node *);
