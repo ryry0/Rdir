@@ -37,7 +37,7 @@ int main(int argc, char ** argv) {
   //ncurses initialization
   initTerminal(&rdir.screen);
 
-  initTable(&rdir.key_mappings, 20); //initialize hash table of key mappings
+  initTable(&rdir.command_key_mappings, 20); //initialize hash table of key mappings
   initSettings(&rdir);
 
   //read configuration file
@@ -135,7 +135,7 @@ int main(int argc, char ** argv) {
   clearDirList(&rdir.dir_current);
   clearDirList(&rdir.dir_parent);
   clearDirList(&rdir.dir_selected);
-  destroyTable(&rdir.key_mappings); //destroy hash table of key mappings
+  destroyTable(&rdir.command_key_mappings); //destroy hash table of key mappings
   endwin();
   return 0;
 } //end main
@@ -160,14 +160,14 @@ void initSettings(rdir_t *rdir) {
   rdir->mode = COMMAND;
 
   //set up default key bindings
-  insert(&rdir->key_mappings, "j", MOVE_SEL_DOWN);
-  insert(&rdir->key_mappings, "k", MOVE_SEL_UP);
-  insert(&rdir->key_mappings, "h", UP_DIR);
-  insert(&rdir->key_mappings, "l", CH_DIR);
-  insert(&rdir->key_mappings, "f", FORWARD_MODE);
-  insert(&rdir->key_mappings, "c", PRINT_CURRENT_DIR);
-  insert(&rdir->key_mappings, "\n", PRINT_SEL_DIR);
-  insert(&rdir->key_mappings, "q", QUIT);
+  insert(&rdir->command_key_mappings, "j", MOVE_SEL_DOWN);
+  insert(&rdir->command_key_mappings, "k", MOVE_SEL_UP);
+  insert(&rdir->command_key_mappings, "h", UP_DIR);
+  insert(&rdir->command_key_mappings, "l", CH_DIR);
+  insert(&rdir->command_key_mappings, "f", FORWARD_MODE);
+  insert(&rdir->command_key_mappings, "c", PRINT_CURRENT_DIR);
+  insert(&rdir->command_key_mappings, "\n", PRINT_SEL_DIR);
+  insert(&rdir->command_key_mappings, "q", QUIT);
 }
 
 /*

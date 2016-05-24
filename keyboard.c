@@ -5,6 +5,14 @@
 #include <hashtable.h>
 #include <unistd.h>
 
+int getMapping(hash_table *map_table, char *key) {
+  hash_node *map_node = retrieve(map_table, key);
+  if (map_node != NULL)
+    return map_node->data;
+  else
+    return 0;
+}
+
 /*
  * HANDLEKEYS takes the input and executes the corresponding bound action
  */
@@ -13,8 +21,8 @@ void handleKeys(rdir_t *rdir) {
   input_buffer[0] = rdir->input;
   char f_input;
 
-  hash_node *map_node;
-  actions_t action;
+  command_actions_t command_action;
+  search_actions_t search_action;
 
   size_t *selected_dir_index = &rdir->selected_dir_index; //zero based index
   size_t *begin_list_offset = &rdir->begin_list_offset;
@@ -25,9 +33,8 @@ void handleKeys(rdir_t *rdir) {
 
   switch(rdir->mode) {
     case COMMAND:
-      map_node = retrieve(&rdir->key_mappings, input_buffer);
-      action = map_node->data;
-      switch(action) {
+      command_action = getMapping(&rdir->command_key_mappings, input_buffer);
+      switch(command_action) {
         case MOVE_SEL_DOWN: //move selection down
           *selected_dir_index = *selected_dir_index + 1;
           *cursor_index = *cursor_index + 1;

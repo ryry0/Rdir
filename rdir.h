@@ -3,6 +3,7 @@
 #include <dir_list.h>
 #include <hashtable.h>
 #define NUM_DIR_LISTS 3
+#define SEARCH_BUFF_SIZE 100
 
 /**********************************/
 /*        ENUM DEFINITIONS        */
@@ -18,8 +19,11 @@ typedef enum {
   PRINT_CURRENT_DIR, //print current dir to stderr
   PRINT_SEL_DIR, //print highlighted dir to stderr
   QUIT
-} actions_t;
+} command_actions_t;
 
+typedef enum {
+  SELECT,
+} search_actions_t;
 
 /**********************************/
 /*       STRUCT DEFINITIONS       */
@@ -35,6 +39,7 @@ typedef struct {
 
   char   *config_file_name;
   char input;
+  char search_buffer[SEARCH_BUFF_SIZE];
 
   size_t parent_column_width;
   size_t current_column_width;
@@ -44,7 +49,8 @@ typedef struct {
   size_t begin_list_offset;
   size_t cursor_index;
 
-  hash_table key_mappings;
+  hash_table command_key_mappings;
+  hash_table search_key_mappings;
   modes_t mode;
 
   union {
