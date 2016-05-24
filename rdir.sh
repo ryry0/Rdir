@@ -28,7 +28,6 @@ function _rdir_explore() {
   ERROR=$(</tmp/rdir)
   rm /tmp/rdir
 
-  echo $ERROR
   DIR=$(echo $ERROR)
 
   if [[ -d $DIR ]]; then
