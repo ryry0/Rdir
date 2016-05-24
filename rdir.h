@@ -14,15 +14,19 @@ typedef enum {
   MOVE_SEL_DOWN, MOVE_SEL_UP, //move selections up and down
   UP_DIR, //move into parent directory
   CH_DIR, //move into selected directory
-  FORWARD_MODE, //activate forward mode: 'f' key in vim
-  SEARCH_MODE,  //activate search mode
+  SET_FORWARD_MODE, //activate forward mode: 'f' key in vim
+  SET_SEARCH_MODE,  //activate search mode
   PRINT_CURRENT_DIR, //print current dir to stderr
   PRINT_SEL_DIR, //print highlighted dir to stderr
-  QUIT
+  QUIT,
+  NOP           //no map
 } command_actions_t;
 
 typedef enum {
-  SELECT,
+  SELECT, //print matching dir to stdout
+  APPEND, //keep adding to search string
+  CHDIR,  //change directory into matching dir
+  TRAVEL, //change dir and re invoke search mode
 } search_actions_t;
 
 /**********************************/

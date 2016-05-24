@@ -38,6 +38,7 @@ int main(int argc, char ** argv) {
   initTerminal(&rdir.screen);
 
   initTable(&rdir.command_key_mappings, 20); //initialize hash table of key mappings
+  initTable(&rdir.search_key_mappings, 20); //initialize hash table of key mappings
   initSettings(&rdir);
 
   //read configuration file
@@ -116,11 +117,19 @@ int main(int argc, char ** argv) {
     }
 
     //debug
-    mvprintw(rdir.screen.max_rows -1, 0, "sdi:%d ci:%d lo:%d mr:%d",
+
+    mvprintw(rdir.screen.max_rows -2, 0, "sdi:%d ci:%d lo:%d mr:%d",
         rdir.selected_dir_index, rdir.cursor_index, rdir.begin_list_offset, rdir.screen.max_rows);
+
+    if (rdir.mode == SEARCH)
+      mvprintw(rdir.screen.max_rows -1, 0, "/%s", rdir.search_buffer);
+
+    mvprintw(rdir.screen.max_rows -3, 0, "inputc:%c inputd: %d key_backspace:%d backb:%d ", rdir.input,
+        rdir.input, KEY_BACKSPACE, '\b');
 
     //HANDLE INPUT
     rdir.input = getch();
+
 
     //handle keys and exec key action
     handleKeys(&rdir);
@@ -136,6 +145,7 @@ int main(int argc, char ** argv) {
   clearDirList(&rdir.dir_parent);
   clearDirList(&rdir.dir_selected);
   destroyTable(&rdir.command_key_mappings); //destroy hash table of key mappings
+  destroyTable(&rdir.search_key_mappings); //initialize hash table of key mappings
   endwin();
   return 0;
 } //end main
@@ -164,10 +174,15 @@ void initSettings(rdir_t *rdir) {
   insert(&rdir->command_key_mappings, "k", MOVE_SEL_UP);
   insert(&rdir->command_key_mappings, "h", UP_DIR);
   insert(&rdir->command_key_mappings, "l", CH_DIR);
-  insert(&rdir->command_key_mappings, "f", FORWARD_MODE);
+  insert(&rdir->command_key_mappings, "f", SET_FORWARD_MODE);
+  insert(&rdir->command_key_mappings, "/", SET_SEARCH_MODE);
   insert(&rdir->command_key_mappings, "c", PRINT_CURRENT_DIR);
   insert(&rdir->command_key_mappings, "\n", PRINT_SEL_DIR);
   insert(&rdir->command_key_mappings, "q", QUIT);
+
+  insert(&rdir->search_key_mappings, "/", CHDIR);
+  insert(&rdir->search_key_mappings, "\n", SELECT);
+  insert(&rdir->search_key_mappings, "\t", TRAVEL);
 }
 
 /*

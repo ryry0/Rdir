@@ -4,13 +4,19 @@
 #include <dirent.h>
 #include <hashtable.h>
 #include <unistd.h>
+#include <stdbool.h>
+#include <string.h>
 
-int getMapping(hash_table *map_table, char *key) {
+#define BACKSPACE 127
+
+bool getMapping(hash_table *map_table, char *key, int *data) {
   hash_node *map_node = retrieve(map_table, key);
-  if (map_node != NULL)
-    return map_node->data;
+  if (map_node != NULL) {
+    *data = map_node->data;
+    return true;
+  }
   else
-    return 0;
+    return false;
 }
 
 /*
@@ -33,7 +39,9 @@ void handleKeys(rdir_t *rdir) {
 
   switch(rdir->mode) {
     case COMMAND:
-      command_action = getMapping(&rdir->command_key_mappings, input_buffer);
+      if (getMapping(&rdir->command_key_mappings, input_buffer, (int *)&command_action)
+          == false)
+        command_action = NOP;
       switch(command_action) {
         case MOVE_SEL_DOWN: //move selection down
           *selected_dir_index = *selected_dir_index + 1;
@@ -84,11 +92,11 @@ void handleKeys(rdir_t *rdir) {
           *begin_list_offset = 0;
           break;
 
-        case FORWARD_MODE:
+        case SET_FORWARD_MODE:
           rdir->mode = FORWARD;
           break;
 
-        case SEARCH_MODE:
+        case SET_SEARCH_MODE:
           rdir->mode = SEARCH;
           break;
 
@@ -105,6 +113,9 @@ void handleKeys(rdir_t *rdir) {
           fprintf(stderr, "%s/%s", dir_current->path,
               dir_current->entries[*selected_dir_index].basename);
           *state = EXITING;
+          break;
+
+        default:
           break;
       } //end switch key
       break;
@@ -146,39 +157,74 @@ void handleKeys(rdir_t *rdir) {
       break;
 
     case SEARCH:
-      f_input = rdir->input;
-      *begin_list_offset = 0;
-      *cursor_index = 0;
-      *selected_dir_index = 0;
-      for (int i = 0; i < dir_current->capacity; ++i) {
-        if(dir_current->entries[*selected_dir_index].basename[0] == f_input)
+      if (getMapping(&rdir->search_key_mappings, input_buffer, (int *) &search_action)
+          == false)
+        search_action = APPEND;
+
+      switch(search_action) {
+        case SELECT:
+          fprintf(stderr, "%s/%s", dir_current->path,
+              dir_current->entries[*selected_dir_index].basename);
+          *state = EXITING;
           break;
 
-        *selected_dir_index = *selected_dir_index + 1;
-        *cursor_index = *cursor_index + 1;
+        case APPEND:
+          if (rdir->input == BACKSPACE) { //if backspace
+            if (strlen(rdir->search_buffer) > 0) //if there are characters
+              //remove the last one
+              rdir->search_buffer[strlen(rdir->search_buffer)-1] = '\0';
+          }
 
-        if (*selected_dir_index >= dir_current->capacity) //bounds checking
-          *selected_dir_index = dir_current->capacity - 1;
+          else if (strlen(rdir->search_buffer) < SEARCH_BUFF_SIZE - 1)
+            strcat(rdir->search_buffer, input_buffer);
 
-        //if the selection is off screen scroll down
-        if (*cursor_index > screen.max_rows - 1)
-          (*begin_list_offset)++;
+          *begin_list_offset = 0;
+          *cursor_index = 0;
+          *selected_dir_index = 0;
+          for (int i = 0; i < dir_current->capacity; ++i) {
+            if(strstr(dir_current->entries[*selected_dir_index].basename,
+                  rdir->search_buffer) != NULL)
+              break;
 
-        //bounds checking for cursor
-        if (*cursor_index >= screen.max_rows - 1)
-          *cursor_index = screen.max_rows - 1;
+            *selected_dir_index = *selected_dir_index + 1;
+            *cursor_index = *cursor_index + 1;
 
-        if (*cursor_index >= dir_current->capacity)
-          *cursor_index = dir_current->capacity - 1;
+            if (*selected_dir_index >= dir_current->capacity) //bounds checking
+              *selected_dir_index = dir_current->capacity - 1;
 
-        //bounds checking for list offset
-        //should only apply if list goes off screen
-        if(screen.max_rows < dir_current->capacity) {
-          if (*begin_list_offset + screen.max_rows > dir_current->capacity)
-            (*begin_list_offset)--;
-        }
-      }
-      rdir->mode = COMMAND;
+            //if the selection is off screen scroll down
+            if (*cursor_index > screen.max_rows - 1)
+              (*begin_list_offset)++;
+
+            //bounds checking for cursor
+            if (*cursor_index >= screen.max_rows - 1)
+              *cursor_index = screen.max_rows - 1;
+
+            if (*cursor_index >= dir_current->capacity)
+              *cursor_index = dir_current->capacity - 1;
+
+            //bounds checking for list offset
+            //should only apply if list goes off screen
+            if(screen.max_rows < dir_current->capacity) {
+              if (*begin_list_offset + screen.max_rows > dir_current->capacity)
+                (*begin_list_offset)--;
+            }
+          }
+          break;
+
+        case CHDIR:
+          chdir(dir_current->entries[*selected_dir_index].basename);
+          *begin_list_offset = 0;
+          rdir->mode = COMMAND;
+          memset(&rdir->search_buffer, 0,  SEARCH_BUFF_SIZE); //reset the search buffer
+          break;
+
+        case TRAVEL:
+          chdir(dir_current->entries[*selected_dir_index].basename);
+          *begin_list_offset = 0;
+          memset(&rdir->search_buffer, 0,  SEARCH_BUFF_SIZE); //reset the search buffer
+          break;
+      } //end switch search action
       break;
   } //end switch mode
 } //end handleKeys
