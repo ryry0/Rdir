@@ -49,5 +49,5 @@ function _rdir_sel_widget() {
 
 zle -N _rdir_explore
 zle -N _rdir_sel_widget
-bindkey '^E' _rdir_explore
-bindkey '^F' _rdir_sel_widget
+bindkey '\ee' _rdir_explore
+bindkey '\ef' _rdir_sel_widget
