@@ -124,8 +124,8 @@ int main(int argc, char ** argv) {
     if (rdir.mode == SEARCH)
       mvprintw(rdir.screen.max_rows -1, 0, "/%s", rdir.search_buffer);
 
-    mvprintw(rdir.screen.max_rows -3, 0, "inputc:%c inputd: %d key_backspace:%d backb:%d ", rdir.input,
-        rdir.input, KEY_BACKSPACE, '\b');
+    mvprintw(rdir.screen.max_rows -3, 0, "inputc:%c inputd: %d", rdir.input,
+        rdir.input);
 
     //HANDLE INPUT
     rdir.input = getch();

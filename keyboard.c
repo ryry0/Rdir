@@ -210,7 +210,7 @@ void handleKeys(rdir_t *rdir) {
                 (*begin_list_offset)--;
             }
           }
-          break;
+          break; //end case APPEND
 
         case CHDIR:
           chdir(dir_current->entries[*selected_dir_index].basename);
@@ -220,11 +220,18 @@ void handleKeys(rdir_t *rdir) {
           break;
 
         case TRAVEL:
-          chdir(dir_current->entries[*selected_dir_index].basename);
-          *begin_list_offset = 0;
-          memset(&rdir->search_buffer, 0,  SEARCH_BUFF_SIZE); //reset the search buffer
+          if (dir_current->entries[*selected_dir_index].is_dir) {
+            chdir(dir_current->entries[*selected_dir_index].basename);
+            *begin_list_offset = 0;
+            memset(&rdir->search_buffer, 0,  SEARCH_BUFF_SIZE); //reset the search buffer
+          }
+          else {
+            fprintf(stderr, "%s/%s", dir_current->path,
+                dir_current->entries[*selected_dir_index].basename);
+            *state = EXITING;
+          }
           break;
       } //end switch search action
-      break;
+      break; //end case SEARCH
   } //end switch mode
 } //end handleKeys
