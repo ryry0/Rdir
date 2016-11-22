@@ -212,9 +212,7 @@ void handleKeys(rdir_t *rdir) {
           }
           break; //end case APPEND
 
-        case CHDIR:
-          chdir(dir_current->entries[*selected_dir_index].basename);
-          *begin_list_offset = 0;
+        case END_SEARCH:
           rdir->mode = COMMAND;
           memset(&rdir->search_buffer, 0,  SEARCH_BUFF_SIZE); //reset the search buffer
           break;

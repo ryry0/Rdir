@@ -17,6 +17,7 @@
 
 #define DEFAULT_CONFIG_FILE ".rdirrc"
 #define ENTER 0x10
+#define CTRL_C 0x03
 
 /**********************************/
 /*       FUNCTION PROTOTYPES      */
@@ -180,7 +181,8 @@ void initSettings(rdir_t *rdir) {
   insert(&rdir->command_key_mappings, "\n", PRINT_SEL_DIR);
   insert(&rdir->command_key_mappings, "q", QUIT);
 
-  insert(&rdir->search_key_mappings, "/", CHDIR);
+  insert(&rdir->search_key_mappings, "/", END_SEARCH);
+  insert(&rdir->search_key_mappings, "\x03", END_SEARCH);
   insert(&rdir->search_key_mappings, "\n", SELECT);
   insert(&rdir->search_key_mappings, "\t", TRAVEL);
 }

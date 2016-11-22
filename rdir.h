@@ -25,7 +25,7 @@ typedef enum {
 typedef enum {
   SELECT, //print matching dir to stdout
   APPEND, //keep adding to search string
-  CHDIR,  //change directory into matching dir
+  END_SEARCH,  //change directory into matching dir
   TRAVEL, //change dir and re invoke search mode
 } search_actions_t;
 
