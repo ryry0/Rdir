@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include <keyboard.h>
 #include <ncurses.h>
 #include <stdio.h>
@@ -182,7 +183,7 @@ void handleKeys(rdir_t *rdir) {
           *cursor_index = 0;
           *selected_dir_index = 0;
           for (int i = 0; i < dir_current->capacity; ++i) {
-            if(strstr(dir_current->entries[*selected_dir_index].basename,
+            if(strcasestr(dir_current->entries[*selected_dir_index].basename,
                   rdir->search_buffer) != NULL)
               break;
 

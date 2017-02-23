@@ -33,7 +33,7 @@ void printColumn(directory_entry_list_t *dir_list, size_t offset,
 /*             MAIN               */
 /**********************************/
 int main(int argc, char ** argv) {
-  rdir_t rdir;
+  rdir_t rdir = {0};
   char format_string[10];
   //ncurses initialization
   initTerminal(&rdir.screen);
